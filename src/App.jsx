@@ -1,98 +1,136 @@
-import { useState } from 'react'
-
-
-import './App.css'
-import { URL } from './constants'
-import Answer from './component/answer';
-
-
+import { useState } from "react";
+import "./App.css";
+import { URL } from "./constants";
+import Answer from "./component/Answer";
+import Sidebar from "./component/Sidebar";
 
 function App() {
-   const [question , setQuestion] = useState('');
-   const [history, setHistory] = useState([]);
+  const [question, setQuestion] = useState("");
+  const [history, setHistory] = useState([]);
 
-   const payload = {
-   "contents": [{
-    "parts": [{"text": question}]
-   }]
-   }
+  const askQuestion = async () => {
+    if (!question.trim()) return;
 
-   const askQuestion = async () => {
+    const currentQuestion = question;
 
-  if (!question.trim()) return;
+    const payload = {
+      contents: [
+        {
+          parts: [{ text: currentQuestion }],
+        },
+      ],
+    };
 
-  const currentQuestion = question;
+    try {
+      let response = await fetch(URL, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
 
-  const payload = {
-    contents: [
-      {
-        parts: [{ text: currentQuestion }]
-      }
-    ]
+      response = await response.json();
+
+      const answer = response.candidates[0].content.parts[0].text;
+
+      setHistory((prev) => [
+        ...prev,
+        {
+          question: currentQuestion,
+          answer,
+        },
+      ]);
+
+      setQuestion("");
+    } catch (err) {
+      console.log(err);
+    }
   };
 
-  let response = await fetch(URL, {
-    method: "POST",
-    body: JSON.stringify(payload)
-  });
-
-  response = await response.json();
-
-  const answer = response.candidates[0].content.parts[0].text;
-
-  setHistory(prev => [
-    ...prev,
-    {
-      question: currentQuestion,
-      answer: answer
-    }
-  ]);
-
-  setQuestion("");
-};
+  const newChat = () => {
+    setHistory([]);
+    setQuestion("");
+  };
 
   return (
-    <div className='grid grid-cols-5 h-screen text-left'>
-      <div className='col-span-1 bg-zinc-800'>
+    <div className="grid grid-cols-5 h-screen bg-zinc-900">
+
+      {/* Sidebar */}
+      <Sidebar history={history} newChat={newChat} />
+
+      {/* Chat Area */}
+      <div className="col-span-4 flex flex-col">
+
+        {/* Messages */}
+        <div className="flex-1 overflow-y-auto p-8">
+
+          {history.length === 0 && (
+            <div className="text-center mt-32">
+              <h1 className="text-5xl font-bold text-white">
+                PromptFlow
+              </h1>
+
+              <p className="text-zinc-400 mt-4">
+                Ask me anything...
+              </p>
+            </div>
+          )}
+
+          {history.map((chat, index) => (
+            <div key={index} className="mb-8">
+
+              {/* User */}
+
+              <div className="flex justify-end mb-4">
+                <div className="bg-blue-600 text-white px-5 py-3 rounded-3xl max-w-xl">
+                  {chat.question}
+                </div>
+              </div>
+
+              {/* AI */}
+
+              <div className="flex justify-start">
+                <div className="bg-zinc-800 rounded-2xl p-5 max-w-3xl">
+                  <Answer ans={chat.answer} />
+                </div>
+              </div>
+
+            </div>
+          ))}
+
+        </div>
+
+        {/* Input */}
+
+        <div className="p-6">
+
+          <div className="bg-zinc-800 border border-zinc-700 rounded-full flex h-16 w-2/3 mx-auto">
+
+            <input
+              className="flex-1 bg-transparent text-white outline-none px-6"
+              placeholder="Ask me anything..."
+              value={question}
+              onChange={(e) => setQuestion(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  askQuestion();
+                }
+              }}
+            />
+
+            <button
+              onClick={askQuestion}
+              className="px-8 text-white hover:text-cyan-400"
+            >
+              Ask
+            </button>
+
+          </div>
+
+        </div>
 
       </div>
-      <div className='col-span-4 p-10' >
-        <div className="container h-110 overflow-y-auto overflow-x-hidden scrollbar-hide">
-          <div className='text-zinc-300'>
-          
-
-          <div className="space-y-8">
-  {history.map((chat, index) => (
-    <div key={index}>
-
-      <div className="flex justify-end mb-4">
-  <div className="bg-blue-600 px-4 py-2 rounded-2xl max-w-xl text-white">
-    {chat.question}
-  </div>
-</div>
-
-<div className="flex justify-start mb-6">
-  <div className="bg-zinc-800 px-4 py-2 rounded-2xl max-w-xl">
-    <Answer ans={chat.answer} />
-  </div>
-</div>
 
     </div>
-  ))}
-</div>
-
-
-         </div>
-        </div>
-        <div className='bg-zinc-800 w-1/2 p-1 pr-5 text-white m-auto rounded-4xl 
-        border
-        border-zinc-700 flex h-16'>
-          <input type='text' value={question} onChange={(event)=> setQuestion(event.target.value)} className='w-full h-full p-3 outline-none' placeholder='ask me anything' />
-          <button onClick={askQuestion} >Ask</button>
-        </div>
-      </div>
-    </div>
-  )
+  );
 }
 
-export default App
+export default App;
